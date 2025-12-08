@@ -22,5 +22,5 @@ chmod 440 /etc/sudoers.d/$LOGIN
 '"
 
 # Run the Ansible playbook
-ansible-playbook -i inventory hypervisor.yml
+ansible-playbook -i $HOSTNAME, hypervisor.yml
 ```

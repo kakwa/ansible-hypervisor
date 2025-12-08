@@ -1,7 +1,9 @@
 ---
-- name: NetBSD Server Setup
+- name: Hypervisory Server Setup
   hosts: all
   become: true
   roles:
+    - { role: repos, tags: ["system", "repos"] }
+    - { role: misc-base, tags: ["system", "misc-base"] }
     - { role: vim, tags: ["system", "vim"] }
     - { role: zsh, tags: ["system", "zsh"] }
