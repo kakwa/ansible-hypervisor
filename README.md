@@ -24,3 +24,16 @@ chmod 440 /etc/sudoers.d/$LOGIN
 # Run the Ansible playbook
 ansible-playbook -i $HOSTNAME, hypervisor.yml
 ```
+
+## Serial Console Access
+
+After running the playbook, you can access the serial console using screen:
+
+```bash
+# Connect to serial console (requires reboot after first setup)
+screen /dev/ttyUSB0 115200
+
+# Detach from screen session: Ctrl-A then D
+# Reattach to session: screen -r
+# Kill session: Ctrl-A then K
+```
