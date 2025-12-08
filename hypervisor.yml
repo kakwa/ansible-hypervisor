@@ -1,0 +1,8 @@
+---
+- name: NetBSD Server Setup
+  hosts: all
+  become: true
+  roles:
+    - { role: users, tags: ["system", "users"] }
+    - { role: vim, tags: ["system", "vim"] }
+    - { role: zsh, tags: ["system", "zsh"] }
