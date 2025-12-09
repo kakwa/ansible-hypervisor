@@ -6,5 +6,6 @@
     - { role: repos, tags: ["system", "repos"] }
     - { role: misc-base, tags: ["system", "misc-base"] }
     - { role: serial-console, tags: ["system", "serial-console"] }
+    - { role: lvm, tags: ["system", "storage", "lvm"] }
     - { role: vim, tags: ["system", "vim"] }
     - { role: zsh, tags: ["system", "zsh"] }

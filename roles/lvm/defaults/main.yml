@@ -1,0 +1,36 @@
+---
+# LVM storage configuration defaults
+
+# Fast pool configuration (RAID 1 with sdb, sdc, sdd, sde)
+lvm_fast_pool_devices:
+  - /dev/sdb
+  - /dev/sdc
+  - /dev/sdd
+  - /dev/sde
+
+lvm_fast_pool_vg_name: "fast-pool"
+lvm_fast_pool_lv_name: "fast-pool-lv"
+lvm_fast_pool_mount_point: "/var/lib/vms/fast-pool"
+lvm_fast_pool_filesystem: "ext4"
+lvm_fast_pool_raid_level: "raid1"  # RAID 1 mirror
+lvm_fast_pool_lv_size: "100%FREE"  # Use all available space
+
+# Slow pool configuration (single disk /dev/sdf)
+lvm_slow_pool_devices:
+  - /dev/sdf
+
+lvm_slow_pool_vg_name: "slow-pool"
+lvm_slow_pool_lv_name: "slow-pool-lv"
+lvm_slow_pool_mount_point: "/var/lib/vms/slow-pool"
+lvm_slow_pool_filesystem: "ext4"
+lvm_slow_pool_lv_size: "100%FREE"  # Use all available space
+
+# Mid pool directory (no LVM, just a directory)
+lvm_mid_pool_directory: "/var/lib/vms/mid-pool"
+
+# Filesystem mount options
+lvm_mount_options: "defaults,noatime"
+
+# Whether to wipe existing signatures on devices
+lvm_wipe_signatures: yes
+

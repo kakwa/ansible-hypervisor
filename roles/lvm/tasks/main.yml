@@ -1,0 +1,159 @@
+---
+# Install required packages
+- name: Install LVM and RAID tools
+  package:
+    name:
+      - lvm2
+      - mdadm
+    state: present
+
+# Fast pool setup (RAID 1)
+- name: Check if fast pool devices exist
+  stat:
+    path: "{{ item }}"
+  register: fast_pool_devices_stat
+  loop: "{{ lvm_fast_pool_devices }}"
+
+- name: Display fast pool devices status
+  debug:
+    msg: "Device {{ item.item }} {{ 'exists' if item.stat.exists else 'does not exist' }}"
+  loop: "{{ fast_pool_devices_stat.results }}"
+
+- name: Create RAID 1 array for fast pool
+  block:
+    - name: Wipe signatures on fast pool devices
+      command: "wipefs -af {{ item }}"
+      loop: "{{ lvm_fast_pool_devices }}"
+      when: lvm_wipe_signatures | bool
+
+    - name: Create RAID 1 array
+      command: >
+        mdadm --create /dev/md/fast-pool
+        --level={{ lvm_fast_pool_raid_level }}
+        --raid-devices={{ lvm_fast_pool_devices | length }}
+        {{ lvm_fast_pool_devices | join(' ') }}
+        --force
+      args:
+        creates: /dev/md/fast-pool
+
+    - name: Wait for RAID array to be available
+      wait_for:
+        path: /dev/md/fast-pool
+        state: present
+        timeout: 30
+
+    - name: Save RAID configuration
+      shell: "mdadm --detail --scan >> /etc/mdadm/mdadm.conf"
+      args:
+        creates: /etc/mdadm/mdadm.conf
+      ignore_errors: yes
+
+    - name: Update initramfs
+      command: update-initramfs -u
+      when: ansible_os_family == "Debian"
+      ignore_errors: yes
+
+    - name: Create physical volume on RAID array
+      lvg:
+        pvs: /dev/md/fast-pool
+        vg: "{{ lvm_fast_pool_vg_name }}"
+        state: present
+
+    - name: Create logical volume for fast pool
+      lvol:
+        vg: "{{ lvm_fast_pool_vg_name }}"
+        lv: "{{ lvm_fast_pool_lv_name }}"
+        size: "{{ lvm_fast_pool_lv_size }}"
+        state: present
+
+    - name: Create filesystem on fast pool logical volume
+      filesystem:
+        fstype: "{{ lvm_fast_pool_filesystem }}"
+        dev: "/dev/{{ lvm_fast_pool_vg_name }}/{{ lvm_fast_pool_lv_name }}"
+        force: no
+
+    - name: Create fast pool mount point
+      file:
+        path: "{{ lvm_fast_pool_mount_point }}"
+        state: directory
+        mode: '0755'
+
+    - name: Mount fast pool
+      mount:
+        path: "{{ lvm_fast_pool_mount_point }}"
+        src: "/dev/{{ lvm_fast_pool_vg_name }}/{{ lvm_fast_pool_lv_name }}"
+        fstype: "{{ lvm_fast_pool_filesystem }}"
+        opts: "{{ lvm_mount_options }}"
+        state: mounted
+
+  when: fast_pool_devices_stat.results | selectattr('stat.exists') | list | length == lvm_fast_pool_devices | length
+
+# Slow pool setup (single disk)
+- name: Check if slow pool devices exist
+  stat:
+    path: "{{ item }}"
+  register: slow_pool_devices_stat
+  loop: "{{ lvm_slow_pool_devices }}"
+
+- name: Display slow pool devices status
+  debug:
+    msg: "Device {{ item.item }} {{ 'exists' if item.stat.exists else 'does not exist' }}"
+  loop: "{{ slow_pool_devices_stat.results }}"
+
+- name: Create slow pool LVM setup
+  block:
+    - name: Wipe signatures on slow pool devices
+      command: "wipefs -af {{ item }}"
+      loop: "{{ lvm_slow_pool_devices }}"
+      when: lvm_wipe_signatures | bool
+
+    - name: Create physical volume for slow pool
+      lvg:
+        pvs: "{{ lvm_slow_pool_devices | join(',') }}"
+        vg: "{{ lvm_slow_pool_vg_name }}"
+        state: present
+
+    - name: Create logical volume for slow pool
+      lvol:
+        vg: "{{ lvm_slow_pool_vg_name }}"
+        lv: "{{ lvm_slow_pool_lv_name }}"
+        size: "{{ lvm_slow_pool_lv_size }}"
+        state: present
+
+    - name: Create filesystem on slow pool logical volume
+      filesystem:
+        fstype: "{{ lvm_slow_pool_filesystem }}"
+        dev: "/dev/{{ lvm_slow_pool_vg_name }}/{{ lvm_slow_pool_lv_name }}"
+        force: no
+
+    - name: Create slow pool mount point
+      file:
+        path: "{{ lvm_slow_pool_mount_point }}"
+        state: directory
+        mode: '0755'
+
+    - name: Mount slow pool
+      mount:
+        path: "{{ lvm_slow_pool_mount_point }}"
+        src: "/dev/{{ lvm_slow_pool_vg_name }}/{{ lvm_slow_pool_lv_name }}"
+        fstype: "{{ lvm_slow_pool_filesystem }}"
+        opts: "{{ lvm_mount_options }}"
+        state: mounted
+
+  when: slow_pool_devices_stat.results | selectattr('stat.exists') | list | length == lvm_slow_pool_devices | length
+
+# Mid pool setup (just a directory)
+- name: Create mid pool directory
+  file:
+    path: "{{ lvm_mid_pool_directory }}"
+    state: directory
+    mode: '0755'
+
+- name: Display configuration summary
+  debug:
+    msg:
+      - "LVM Configuration Summary:"
+      - "Fast Pool: {{ lvm_fast_pool_mount_point }} (RAID 1 on {{ lvm_fast_pool_devices | join(', ') }})"
+      - "Slow Pool: {{ lvm_slow_pool_mount_point }} (on {{ lvm_slow_pool_devices | join(', ') }})"
+      - "Mid Pool: {{ lvm_mid_pool_directory }} (directory only)"
+
