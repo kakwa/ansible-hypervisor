@@ -125,6 +125,61 @@
   changed_when: false
   failed_when: false
 
+# Configure additional networks
+- name: Create network XML files from templates
+  template:
+    src: "{% if item.type == 'bridge' %}bridge-network.xml.j2{% else %}internal-network.xml.j2{% endif %}"
+    dest: "/tmp/{{ item.name }}-network.xml"
+    mode: '0644'
+  loop: "{{ libvirt_networks }}"
+  when: libvirt_networks is defined and libvirt_networks | length > 0
+
+- name: Define libvirt networks
+  shell: |
+    if ! virsh net-info {{ item.name }} >/dev/null 2>&1; then
+      virsh net-define /tmp/{{ item.name }}-network.xml
+      echo "DEFINED"
+    else
+      echo "EXISTS"
+    fi
+  loop: "{{ libvirt_networks }}"
+  when: libvirt_networks is defined and libvirt_networks | length > 0
+  register: net_define
+  changed_when: "'DEFINED' in net_define.stdout"
+  failed_when: false
+
+- name: Start libvirt networks
+  shell: |
+    if virsh net-info {{ item.name }} 2>/dev/null | grep -q 'Active.*no'; then
+      virsh net-start {{ item.name }}
+      echo "STARTED"
+    else
+      echo "ALREADY_ACTIVE"
+    fi
+  loop: "{{ libvirt_networks }}"
+  when:
+    - libvirt_networks is defined and libvirt_networks | length > 0
+    - item.state == 'active'
+  register: net_start
+  changed_when: "'STARTED' in net_start.stdout"
+  failed_when: false
+
+- name: Set libvirt networks to autostart
+  shell: |
+    if virsh net-info {{ item.name }} 2>/dev/null | grep -q 'Autostart.*no'; then
+      virsh net-autostart {{ item.name }}
+      echo "ENABLED"
+    else
+      echo "ALREADY_ENABLED"
+    fi
+  loop: "{{ libvirt_networks }}"
+  when:
+    - libvirt_networks is defined and libvirt_networks | length > 0
+    - item.autostart | bool
+  register: net_autostart
+  changed_when: "'ENABLED' in net_autostart.stdout"
+  failed_when: false
+
 # Configure storage pools
 - name: Check if storage pool paths exist
   stat:

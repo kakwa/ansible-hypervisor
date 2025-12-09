@@ -25,6 +25,25 @@ libvirt_users: []  # Add users to libvirt and libvirt-qemu groups
 libvirt_default_network_autostart: true
 libvirt_default_network_state: active
 
+# Additional networks
+libvirt_networks:
+  - name: bridge-network
+    type: bridge
+    bridge_name: virbr-enp6s0
+    interface: enp6s0
+    autostart: true
+    state: active
+  - name: internal-network
+    type: internal
+    bridge_name: virbr-internal
+    domain: internal.local
+    gateway: 192.168.200.1
+    netmask: 255.255.255.0
+    dhcp_start: 192.168.200.50
+    dhcp_end: 192.168.200.200
+    autostart: true
+    state: active
+
 # Storage pools configuration
 libvirt_storage_pools:
   - name: fast-pool
