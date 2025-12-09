@@ -20,7 +20,7 @@ lvm_fast_pool_vg_name: "fast-pool"
 lvm_fast_pool_lv_name: "fast-pool-lv"
 lvm_fast_pool_mount_point: "/var/lib/vms/fast-pool"
 lvm_fast_pool_filesystem: "ext4"
-lvm_fast_pool_raid_level: "1"  # RAID 1 (6 disks = ~419.1G usable with mirroring)
+lvm_fast_pool_raid_level: "5"  # RAID 1 (6 disks = ~419.1G usable with mirroring)
 lvm_fast_pool_lv_size: "100%FREE"  # Use all available space
 
 # Slow pool configuration (single 1.8TB WD disk)

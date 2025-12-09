@@ -138,6 +138,7 @@
         {{ lvm_fast_pool_devices | join(' ') }}
         --bitmap=internal
         --force
+        --run
       args:
         creates: /dev/md/fast-pool
       register: raid_created
@@ -338,4 +339,3 @@
       - "Slow Pool: {{ lvm_slow_pool_mount_point }} (on {{ lvm_slow_pool_devices | join(', ') }})"
       - "Mid Pool: {{ lvm_mid_pool_directory }} (directory only)"
   when: lvm_enable | bool
-
