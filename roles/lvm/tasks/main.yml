@@ -1,4 +1,12 @@
 ---
+- name: Check if LVM is enabled
+  fail:
+    msg: |
+      LVM role is disabled by default for safety.
+      To enable LVM operations, set 'lvm_enable: true' in your playbook or inventory.
+      WARNING: LVM operations can be destructive and will wipe data on configured devices!
+  when: not lvm_enable | bool
+
 # Install required packages
 - name: Install LVM and RAID tools
   package:
@@ -6,18 +14,21 @@
       - lvm2
       - mdadm
     state: present
+  when: lvm_enable | bool
 
-# Fast pool setup (RAID 1)
+# Fast pool setup (RAID 5)
 - name: Check if fast pool devices exist
   stat:
     path: "{{ item }}"
   register: fast_pool_devices_stat
   loop: "{{ lvm_fast_pool_devices }}"
+  when: lvm_enable | bool
 
 - name: Display fast pool devices status
   debug:
     msg: "Device {{ item.item }} {{ 'exists' if item.stat.exists else 'does not exist' }}"
   loop: "{{ fast_pool_devices_stat.results }}"
+  when: lvm_enable | bool
 
 - name: Create RAID 1 array for fast pool
   block:
@@ -32,6 +43,7 @@
         --level={{ lvm_fast_pool_raid_level }}
         --raid-devices={{ lvm_fast_pool_devices | length }}
         {{ lvm_fast_pool_devices | join(' ') }}
+        --bitmap=internal
         --force
       args:
         creates: /dev/md/fast-pool
@@ -86,7 +98,9 @@
         opts: "{{ lvm_mount_options }}"
         state: mounted
 
-  when: fast_pool_devices_stat.results | selectattr('stat.exists') | list | length == lvm_fast_pool_devices | length
+  when:
+    - lvm_enable | bool
+    - fast_pool_devices_stat.results | selectattr('stat.exists') | list | length == lvm_fast_pool_devices | length
 
 # Slow pool setup (single disk)
 - name: Check if slow pool devices exist
@@ -94,11 +108,13 @@
     path: "{{ item }}"
   register: slow_pool_devices_stat
   loop: "{{ lvm_slow_pool_devices }}"
+  when: lvm_enable | bool
 
 - name: Display slow pool devices status
   debug:
     msg: "Device {{ item.item }} {{ 'exists' if item.stat.exists else 'does not exist' }}"
   loop: "{{ slow_pool_devices_stat.results }}"
+  when: lvm_enable | bool
 
 - name: Create slow pool LVM setup
   block:
@@ -140,7 +156,9 @@
         opts: "{{ lvm_mount_options }}"
         state: mounted
 
-  when: slow_pool_devices_stat.results | selectattr('stat.exists') | list | length == lvm_slow_pool_devices | length
+  when:
+    - lvm_enable | bool
+    - slow_pool_devices_stat.results | selectattr('stat.exists') | list | length == lvm_slow_pool_devices | length
 
 # Mid pool setup (just a directory)
 - name: Create mid pool directory
@@ -148,12 +166,14 @@
     path: "{{ lvm_mid_pool_directory }}"
     state: directory
     mode: '0755'
+  when: lvm_enable | bool
 
 - name: Display configuration summary
   debug:
     msg:
       - "LVM Configuration Summary:"
-      - "Fast Pool: {{ lvm_fast_pool_mount_point }} (RAID 1 on {{ lvm_fast_pool_devices | join(', ') }})"
+      - "Fast Pool: {{ lvm_fast_pool_mount_point }} (RAID {{ lvm_fast_pool_raid_level }} on {{ lvm_fast_pool_devices | length }} disks)"
       - "Slow Pool: {{ lvm_slow_pool_mount_point }} (on {{ lvm_slow_pool_devices | join(', ') }})"
       - "Mid Pool: {{ lvm_mid_pool_directory }} (directory only)"
+  when: lvm_enable | bool
 

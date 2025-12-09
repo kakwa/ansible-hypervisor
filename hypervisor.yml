@@ -6,6 +6,9 @@
     - { role: repos, tags: ["system", "repos"] }
     - { role: misc-base, tags: ["system", "misc-base"] }
     - { role: serial-console, tags: ["system", "serial-console"] }
-    - { role: lvm, tags: ["system", "storage", "lvm"] }
     - { role: vim, tags: ["system", "vim"] }
     - { role: zsh, tags: ["system", "zsh"] }
+    # LVM role - set lvm_enable: true when ready to set up storage
+    # WARNING: This will wipe data on configured devices!
+    #- { role: lvm, vars: { lvm_enable: false }, tags: ["hypervisor", "storage", "lvm"] }
+    - { role: libvirt, tags: ["hypervisor", "virtualization", "libvirt"] }

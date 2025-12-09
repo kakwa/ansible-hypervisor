@@ -1,23 +1,31 @@
 ---
 # LVM storage configuration defaults
+# ⚠️  IMPORTANT: Use /dev/disk/by-id/ paths for stable device identification!
+# Run 'ls -l /dev/disk/by-id/' to find your disk IDs
 
-# Fast pool configuration (RAID 1 with sdb, sdc, sdd, sde)
+# Safety flag - LVM operations will ONLY run if this is set to true
+# This prevents accidental data loss
+lvm_enable: false
+
+# Fast pool configuration (RAID 5 with 6x OCZ 139.7G drives)
 lvm_fast_pool_devices:
-  - /dev/sdb
-  - /dev/sdc
-  - /dev/sdd
-  - /dev/sde
+  - /dev/disk/by-id/ata-OCZ-VELO_DRIVE_OCZ-7LZ6F9S4RGG17561
+  - /dev/disk/by-id/ata-OCZ-VELO_DRIVE_OCZ-59BY52U062ID89M9
+  - /dev/disk/by-id/ata-OCZ-VELO_DRIVE_OCZ-41IL9132PN9EY7HD
+  - /dev/disk/by-id/ata-OCZ-VELO_DRIVE_OCZ-N32Q91YED80409T5
+  - /dev/disk/by-id/ata-OCZ-VELO_DRIVE_OCZ-S117WS0340T125L4
+  - /dev/disk/by-id/ata-OCZ-VELO_DRIVE_OCZ-1746Q85H212J9C5W
 
 lvm_fast_pool_vg_name: "fast-pool"
 lvm_fast_pool_lv_name: "fast-pool-lv"
 lvm_fast_pool_mount_point: "/var/lib/vms/fast-pool"
 lvm_fast_pool_filesystem: "ext4"
-lvm_fast_pool_raid_level: "raid1"  # RAID 1 mirror
+lvm_fast_pool_raid_level: "5"  # RAID 5 (6 disks = ~698G usable with 1 disk parity)
 lvm_fast_pool_lv_size: "100%FREE"  # Use all available space
 
-# Slow pool configuration (single disk /dev/sdf)
+# Slow pool configuration (single 1.8TB WD disk)
 lvm_slow_pool_devices:
-  - /dev/sdf
+  - /dev/disk/by-id/ata-WDC_WD20EZRX-00DC0B0_WD-WMC1T0207359
 
 lvm_slow_pool_vg_name: "slow-pool"
 lvm_slow_pool_lv_name: "slow-pool-lv"
