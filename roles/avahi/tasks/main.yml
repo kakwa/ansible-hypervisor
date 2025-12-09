@@ -88,3 +88,4 @@
       - "{% for host in avahi_additional_hostnames %}  - {{ host }}.local\n{% endfor %}"
 
 
+

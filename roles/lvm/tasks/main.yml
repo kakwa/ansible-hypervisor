@@ -53,14 +53,82 @@
   changed_when: false
   when: lvm_enable | bool
 
+- name: Force remove fast pool if recreation requested
+  block:
+    - name: Unmount fast pool if mounted
+      mount:
+        path: "{{ lvm_fast_pool_mount_point }}"
+        state: absent
+      failed_when: false
+
+    - name: Remove fast pool logical volume
+      lvol:
+        vg: "{{ lvm_fast_pool_vg_name }}"
+        lv: "{{ lvm_fast_pool_lv_name }}"
+        state: absent
+        force: yes
+      failed_when: false
+
+    - name: Remove fast pool volume group
+      lvg:
+        vg: "{{ lvm_fast_pool_vg_name }}"
+        state: absent
+        force: yes
+      failed_when: false
+
+    - name: Stop RAID array for fast pool
+      command: "mdadm --stop /dev/md/fast-pool"
+      failed_when: false
+      ignore_errors: yes
+
+    - name: Stop any other RAID arrays on fast pool devices
+      shell: |
+        for dev in {{ lvm_fast_pool_devices | join(' ') }}; do
+          # Find any RAID arrays using this device
+          md_devices=$(grep -l "$dev" /sys/block/md*/md/dev-*/block/*/uevent 2>/dev/null | cut -d/ -f4 | sort -u || true)
+          for md in $md_devices; do
+            echo "Stopping /dev/$md"
+            mdadm --stop /dev/$md 2>/dev/null || true
+          done
+        done
+      failed_when: false
+      ignore_errors: yes
+
+  when:
+    - lvm_enable | bool
+    - lvm_force_recreate | bool
+    - fast_pool_vg_check.rc == 0
+
 - name: Create RAID 1 array for fast pool
   block:
-    - name: Wipe signatures on fast pool devices
-      command: "wipefs -af {{ item }}"
-      loop: "{{ lvm_fast_pool_devices }}"
+    - name: Thorough wipe of fast pool devices
+      block:
+        - name: Zero RAID superblocks on fast pool devices
+          command: "mdadm --zero-superblock {{ item }}"
+          loop: "{{ lvm_fast_pool_devices }}"
+          failed_when: false
+          ignore_errors: yes
+
+        - name: Check for signatures on fast pool devices
+          command: "wipefs -n {{ item }}"
+          loop: "{{ lvm_fast_pool_devices }}"
+          register: fast_pool_signatures
+          failed_when: false
+          changed_when: false
+
+        - name: Display signatures found on fast pool devices
+          debug:
+            msg: "{{ item.stdout }}"
+          loop: "{{ fast_pool_signatures.results }}"
+          when: item.stdout != ""
+
+        - name: Wipe all signatures on fast pool devices
+          command: "wipefs -af {{ item }}"
+          loop: "{{ lvm_fast_pool_devices }}"
+
       when:
         - lvm_wipe_signatures | bool
-        - fast_pool_vg_check.rc != 0
+        - (fast_pool_vg_check.rc != 0 or lvm_force_recreate | bool)
 
     - name: Create RAID 1 array
       command: >
@@ -72,6 +140,7 @@
         --force
       args:
         creates: /dev/md/fast-pool
+      register: raid_created
 
     - name: Wait for RAID array to be available
       wait_for:
@@ -84,10 +153,13 @@
       args:
         creates: /etc/mdadm/mdadm.conf
       ignore_errors: yes
+      register: mdadm_conf_updated
 
     - name: Update initramfs
       command: update-initramfs -u
-      when: ansible_os_family == "Debian"
+      when:
+        - ansible_os_family == "Debian"
+        - raid_created is changed or mdadm_conf_updated is changed
       ignore_errors: yes
 
     - name: Create physical volume on RAID array
@@ -151,14 +223,64 @@
   changed_when: false
   when: lvm_enable | bool
 
+- name: Force remove slow pool if recreation requested
+  block:
+    - name: Unmount slow pool if mounted
+      mount:
+        path: "{{ lvm_slow_pool_mount_point }}"
+        state: absent
+      failed_when: false
+
+    - name: Remove slow pool logical volume
+      lvol:
+        vg: "{{ lvm_slow_pool_vg_name }}"
+        lv: "{{ lvm_slow_pool_lv_name }}"
+        state: absent
+        force: yes
+      failed_when: false
+
+    - name: Remove slow pool volume group
+      lvg:
+        vg: "{{ lvm_slow_pool_vg_name }}"
+        state: absent
+        force: yes
+      failed_when: false
+
+  when:
+    - lvm_enable | bool
+    - lvm_force_recreate | bool
+    - slow_pool_vg_check.rc == 0
+
 - name: Create slow pool LVM setup
   block:
-    - name: Wipe signatures on slow pool devices
-      command: "wipefs -af {{ item }}"
-      loop: "{{ lvm_slow_pool_devices }}"
+    - name: Thorough wipe of slow pool devices
+      block:
+        - name: Zero any RAID superblocks on slow pool devices
+          command: "mdadm --zero-superblock {{ item }}"
+          loop: "{{ lvm_slow_pool_devices }}"
+          failed_when: false
+          ignore_errors: yes
+
+        - name: Check for signatures on slow pool devices
+          command: "wipefs -n {{ item }}"
+          loop: "{{ lvm_slow_pool_devices }}"
+          register: slow_pool_signatures
+          failed_when: false
+          changed_when: false
+
+        - name: Display signatures found on slow pool devices
+          debug:
+            msg: "{{ item.stdout }}"
+          loop: "{{ slow_pool_signatures.results }}"
+          when: item.stdout != ""
+
+        - name: Wipe all signatures on slow pool devices
+          command: "wipefs -af {{ item }}"
+          loop: "{{ lvm_slow_pool_devices }}"
+
       when:
         - lvm_wipe_signatures | bool
-        - slow_pool_vg_check.rc != 0
+        - (slow_pool_vg_check.rc != 0 or lvm_force_recreate | bool)
 
     - name: Create physical volume for slow pool
       lvg:

@@ -150,33 +150,48 @@
   shell: |
     if ! virsh pool-info {{ item.name }} >/dev/null 2>&1; then
       virsh pool-define-as {{ item.name }} {{ item.type }} --target {{ item.path }}
+      echo "CHANGED"
+    else
+      echo "EXISTS"
     fi
   loop: "{{ libvirt_storage_pools }}"
   register: pool_define
-  changed_when: "'Pool ' + item.name + ' defined' in pool_define.stderr or pool_define.rc == 0"
+  changed_when: "'CHANGED' in pool_define.stdout"
   failed_when: false
 
 - name: Build libvirt storage pools
   command: virsh pool-build {{ item.name }}
   loop: "{{ libvirt_storage_pools }}"
   register: pool_build
-  changed_when: pool_build.rc == 0
+  changed_when: "'successfully built' in pool_build.stdout"
   failed_when: false
 
 - name: Start libvirt storage pools
-  command: virsh pool-start {{ item.name }}
+  shell: |
+    if virsh pool-info {{ item.name }} 2>/dev/null | grep -q 'State:.*inactive'; then
+      virsh pool-start {{ item.name }}
+      echo "STARTED"
+    else
+      echo "ALREADY_ACTIVE"
+    fi
   loop: "{{ libvirt_storage_pools }}"
   when: item.state == 'active'
   register: pool_start
-  changed_when: pool_start.rc == 0
+  changed_when: "'STARTED' in pool_start.stdout"
   failed_when: false
 
 - name: Set libvirt storage pools to autostart
-  command: virsh pool-autostart {{ item.name }}
+  shell: |
+    if virsh pool-info {{ item.name }} 2>/dev/null | grep -q 'Autostart:.*no'; then
+      virsh pool-autostart {{ item.name }}
+      echo "ENABLED"
+    else
+      echo "ALREADY_ENABLED"
+    fi
   loop: "{{ libvirt_storage_pools }}"
   when: item.autostart | bool
   register: pool_autostart
-  changed_when: pool_autostart.rc == 0
+  changed_when: "'ENABLED' in pool_autostart.stdout"
   failed_when: false
 
 # Display configuration summary
