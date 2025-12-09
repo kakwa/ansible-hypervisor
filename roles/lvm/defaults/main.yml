@@ -37,7 +37,7 @@ lvm_slow_pool_lv_size: "100%FREE"  # Use all available space
 lvm_mid_pool_directory: "/var/lib/vms/mid-pool"
 
 # Filesystem mount options
-lvm_mount_options: "defaults,noatime"
+lvm_mount_options: "defaults,noatime,nofail,x-systemd.device-timeout=9"
 
 # Whether to wipe existing signatures on devices
 lvm_wipe_signatures: yes

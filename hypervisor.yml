@@ -11,5 +11,5 @@
     - { role: zsh, tags: ["system", "zsh"] }
     # LVM role - set lvm_enable: true when ready to set up storage
     # WARNING: This will wipe data on configured devices!
-    #- { role: lvm, vars: { lvm_enable: false }, tags: ["hypervisor", "storage", "lvm"] }
+    - { role: lvm, vars: { lvm_enable: true }, tags: ["hypervisor", "storage", "lvm"] }
     - { role: libvirt, tags: ["hypervisor", "virtualization", "libvirt"] }

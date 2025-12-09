@@ -16,6 +16,22 @@
     state: present
   when: lvm_enable | bool
 
+# Rescan device mapper and LVM to detect existing setups
+- name: Scan for LVM physical volumes
+  command: pvscan
+  changed_when: false
+  when: lvm_enable | bool
+
+- name: Scan for LVM volume groups
+  command: vgscan
+  changed_when: false
+  when: lvm_enable | bool
+
+- name: Activate all volume groups
+  command: vgchange -ay
+  changed_when: false
+  when: lvm_enable | bool
+
 # Fast pool setup (RAID 5)
 - name: Check if fast pool devices exist
   stat:
@@ -30,12 +46,21 @@
   loop: "{{ fast_pool_devices_stat.results }}"
   when: lvm_enable | bool
 
+- name: Check if fast pool volume group exists
+  command: "vgs {{ lvm_fast_pool_vg_name }}"
+  register: fast_pool_vg_check
+  failed_when: false
+  changed_when: false
+  when: lvm_enable | bool
+
 - name: Create RAID 1 array for fast pool
   block:
     - name: Wipe signatures on fast pool devices
       command: "wipefs -af {{ item }}"
       loop: "{{ lvm_fast_pool_devices }}"
-      when: lvm_wipe_signatures | bool
+      when:
+        - lvm_wipe_signatures | bool
+        - fast_pool_vg_check.rc != 0
 
     - name: Create RAID 1 array
       command: >
@@ -70,12 +95,15 @@
         pvs: /dev/md/fast-pool
         vg: "{{ lvm_fast_pool_vg_name }}"
         state: present
+      when: fast_pool_vg_check.rc != 0
 
     - name: Create logical volume for fast pool
       lvol:
         vg: "{{ lvm_fast_pool_vg_name }}"
         lv: "{{ lvm_fast_pool_lv_name }}"
         size: "{{ lvm_fast_pool_lv_size }}"
+        shrink: no
+        resizefs: yes
         state: present
 
     - name: Create filesystem on fast pool logical volume
@@ -116,24 +144,36 @@
   loop: "{{ slow_pool_devices_stat.results }}"
   when: lvm_enable | bool
 
+- name: Check if slow pool volume group exists
+  command: "vgs {{ lvm_slow_pool_vg_name }}"
+  register: slow_pool_vg_check
+  failed_when: false
+  changed_when: false
+  when: lvm_enable | bool
+
 - name: Create slow pool LVM setup
   block:
     - name: Wipe signatures on slow pool devices
       command: "wipefs -af {{ item }}"
       loop: "{{ lvm_slow_pool_devices }}"
-      when: lvm_wipe_signatures | bool
+      when:
+        - lvm_wipe_signatures | bool
+        - slow_pool_vg_check.rc != 0
 
     - name: Create physical volume for slow pool
       lvg:
         pvs: "{{ lvm_slow_pool_devices | join(',') }}"
         vg: "{{ lvm_slow_pool_vg_name }}"
         state: present
+      when: slow_pool_vg_check.rc != 0
 
     - name: Create logical volume for slow pool
       lvol:
         vg: "{{ lvm_slow_pool_vg_name }}"
         lv: "{{ lvm_slow_pool_lv_name }}"
         size: "{{ lvm_slow_pool_lv_size }}"
+        shrink: no
+        resizefs: yes
         state: present
 
     - name: Create filesystem on slow pool logical volume

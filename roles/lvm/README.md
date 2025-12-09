@@ -61,7 +61,7 @@ Use the full `/dev/disk/by-id/ata-...` path in your configuration.
 - `lvm_mid_pool_directory`: Directory path (default: "/var/lib/vms/mid-pool")
 
 ### General
-- `lvm_mount_options`: Mount options (default: "defaults,noatime")
+- `lvm_mount_options`: Mount options (default: "defaults,noatime,nofail,x-systemd.device-timeout=9")
 - `lvm_wipe_signatures`: Whether to wipe existing signatures (default: yes)
 
 ## Example Playbook
