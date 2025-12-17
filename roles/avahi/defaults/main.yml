@@ -3,35 +3,10 @@
 
 # Hostname to announce (without .local suffix)
 # Set to empty string to use system hostname
-avahi_hostname: ""
-
-# Additional hostnames to announce (CNAME aliases)
-avahi_additional_hostnames:
-  - "kvm"
+avahi_hostname: "kvm"
 
 # Domain to use
 avahi_domain_name: "local"
-
-# Enable IPv4
-avahi_use_ipv4: yes
-
-# Enable IPv6
-avahi_use_ipv6: yes
-
-# Publish workstation service
-avahi_publish_workstation: yes
-
-# Publish addresses
-avahi_publish_addresses: yes
-
-# Publish hostname
-avahi_publish_hinfo: yes
-
-# Allow interfaces (empty = all)
-avahi_allow_interfaces: ""
-
-# Deny interfaces
-avahi_deny_interfaces: ""
 
 # Enable and start service
 avahi_service_enabled: true

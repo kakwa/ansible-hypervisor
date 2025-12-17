@@ -1,41 +1,11 @@
 # This file is managed by Ansible - DO NOT EDIT MANUALLY
 
 [server]
-{% if avahi_hostname | length > 0 %}
 host-name={{ avahi_hostname }}
-{% else %}
-#host-name=
-{% endif %}
 domain-name={{ avahi_domain_name }}
-use-ipv4={{ 'yes' if avahi_use_ipv4 else 'no' }}
-use-ipv6={{ 'yes' if avahi_use_ipv6 else 'no' }}
-allow-interfaces={{ avahi_allow_interfaces }}
-deny-interfaces={{ avahi_deny_interfaces }}
-check-response-ttl=no
-use-iff-running=no
-enable-dbus=yes
-disallow-other-stacks=no
-
-[wide-area]
-enable-wide-area=yes
-
-[publish]
-publish-addresses={{ 'yes' if avahi_publish_addresses else 'no' }}
-publish-hinfo={{ 'yes' if avahi_publish_hinfo else 'no' }}
-publish-workstation={{ 'yes' if avahi_publish_workstation else 'no' }}
-publish-domain=yes
+use-ipv4=yes
+use-ipv6=yes
+use-iff-running=yes
 
 [reflector]
 enable-reflector=no
-reflect-ipv=no
-
-[rlimits]
-rlimit-core=0
-rlimit-data=4194304
-rlimit-fsize=0
-rlimit-nofile=768
-rlimit-stack=4194304
-rlimit-nproc=3
-
-
-

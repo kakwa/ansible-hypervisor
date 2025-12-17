@@ -31,13 +31,11 @@
 - name: Create CNAME records for additional hostnames
   template:
     src: cname.service.j2
-    dest: "/etc/avahi/services/{{ item }}.service"
+    dest: "/etc/avahi/services/kvm.service"
     owner: root
     group: root
     mode: '0644'
-  loop: "{{ avahi_additional_hostnames }}"
   notify: restart avahi-daemon
-  when: avahi_additional_hostnames | length > 0
 
 # Enable NSS mDNS resolution
 - name: Check if nsswitch.conf has mdns
@@ -81,11 +79,7 @@
     msg:
       - "=== Avahi Configuration Summary ==="
       - "System hostname: {{ system_hostname.stdout }}.local"
-      - "Additional aliases: {{ avahi_additional_hostnames | join('.local, ') }}.local"
       - ""
       - "You can now access this system at:"
       - "  - {{ system_hostname.stdout }}.local"
-      - "{% for host in avahi_additional_hostnames %}  - {{ host }}.local\n{% endfor %}"
-
-
 
