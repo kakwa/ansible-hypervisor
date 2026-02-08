@@ -204,19 +204,24 @@
   changed_when: "'STARTED' in pool_start.stdout"
   failed_when: false
 
-- name: Set libvirt storage pools to autostart
-  shell: |
-    if virsh pool-info {{ item.name }} 2>/dev/null | grep -q 'Autostart:.*no'; then
-      virsh pool-autostart {{ item.name }}
-      echo "ENABLED"
-    else
-      echo "ALREADY_ENABLED"
-    fi
+- name: Get libvirt storage pool autostart status
+  command: virsh pool-info {{ item.name }}
   loop: "{{ libvirt_storage_pools }}"
   when: item.autostart | bool
-  register: pool_autostart
-  changed_when: "'ENABLED' in pool_autostart.stdout"
+  register: pool_autostart_status
+  changed_when: false
   failed_when: false
+
+- name: Set libvirt storage pools to autostart
+  command: virsh pool-autostart {{ item.item.name }}
+  loop: "{{ pool_autostart_status.results }}"
+  when:
+    - item.skipped is not defined or not item.skipped
+    - item.rc == 0
+    - item.stdout is search('Autostart:\\s+no')
+  loop_control:
+    label: "{{ item.item.name }}"
+  changed_when: true
 
 # Display configuration summary
 - name: Get libvirt version
