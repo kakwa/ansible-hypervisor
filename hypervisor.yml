@@ -5,6 +5,7 @@
   roles:
     - { role: repos, tags: ["system", "repos"] }
     - { role: misc-base, tags: ["system", "misc-base"] }
+    - { role: talos-tools, tags: ["system", "talos-tools"] }
     - { role: serial-console, tags: ["system", "serial-console"] }
     - { role: avahi, tags: ["system", "network", "avahi"] }
     - { role: vim, tags: ["system", "vim"] }
